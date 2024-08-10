@@ -1,0 +1,140 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const request = require('request');
+
+const app = express().use(bodyParser.json());
+const token = 'SJLyF0Ch5W/F2TjaMZyS4R7WELs82MOTiBWd1KjdNgtcOxelldGAu3NC7jnYS7g5wte089Y3jvfxqiV/EIn8k5fLHpPbV1DpFE5MNnt4U5nVFf+VcLrZ6QlZ4e9nc0+j+NKwNEXRRk8BHaXH7Vf/nAdB04t89/1O/w1cDnyilFU='; // เปลี่ยนเป็น Channel Access Token ของคุณ
+
+app.listen(3000, () => console.log('[ChatBot] Webhook is listening'));
+
+// Endpoint สำหรับ Webhook
+app.post('/webhook', (req, res) => {
+    if (!req.body.events) {
+        return res.sendStatus(400);
+    }
+
+    const events = req.body.events;
+    events.forEach(event => {
+        if (event.type === 'message') {
+            const userId = event.source.userId; // ดึง userId
+            const messageType = event.message.type; // ประเภทของข้อความ
+
+            let replyData;
+
+            if (messageType === 'text') {
+                const messageText = event.message.text; // ข้อความที่ได้รับ
+                replyData = {
+                    to: userId,
+                    messages: [
+                        {
+                            type: 'flex',
+                            altText: 'Text message received',
+                            contents: {
+                                type: 'bubble',
+                                body: {
+                                    type: 'box',
+                                    layout: 'vertical',
+                                    contents: [
+                                        {
+                                            type: 'text',
+                                            text: 'เช็คข้อความ',
+                                            weight: 'bold',
+                                            size: 'lg'
+                                        },
+                                        {
+                                            type: 'text',
+                                            text: `คุณส่งข้อความ: ${messageText}`,
+                                            margin: 'md'
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                };
+            } else if (messageType === 'sticker') {
+                const packageId = event.message.packageId;
+                const stickerId = event.message.stickerId;
+                replyData = {
+                    to: userId,
+                    messages: [
+                        {
+                            type: 'flex',
+                            altText: 'Sticker received',
+                            contents: {
+                                type: 'bubble',
+                                body: {
+                                    type: 'box',
+                                    layout: 'vertical',
+                                    contents: [
+                                        {
+                                            type: 'text',
+                                            text: `Sticker Package ID: ${packageId}`,
+                                            weight: 'bold',
+                                            size: 'lg'
+                                        },
+                                        {
+                                            type: 'text',
+                                            // text: `Sticker Package ID: ${packageId}`, 
+                                            text: `Sticker ID: ${stickerId}`,
+                                            margin: 'md'
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                };
+            } else if (messageType === 'emoji') {
+                const emoji = event.message; // ข้อมูลของ Emoji
+                replyData = {
+                    to: userId,
+                    messages: [
+                        {
+                            type: 'flex',
+                            altText: 'Emoji received',
+                            contents: {
+                                type: 'bubble',
+                                body: {
+                                    type: 'box',
+                                    layout: 'vertical',
+                                    contents: [
+                                        {
+                                            type: 'text',
+                                            text: 'Received Emoji',
+                                            weight: 'bold',
+                                            size: 'lg'
+                                        },
+                                        {
+                                            type: 'text',
+                                            text: `Emoji: ${emoji}` // การแสดงข้อมูล Emoji
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                };
+            }
+
+            // ส่งการตอบกลับ
+            request({
+                method: 'POST',
+                uri: 'https://api.line.me/v2/bot/message/push',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(replyData)
+            }, (err, httpResponse, body) => {
+                if (err) {
+                    console.log('Error:', err);
+                } else {
+                    console.log('Response from Line OA:', body);
+                }
+            });
+        }
+    });
+
+    res.sendStatus(200);
+});

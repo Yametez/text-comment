@@ -1,0 +1,201 @@
+HelloWorld.vue
+<template>
+  <v-card class="pa-5 mx-auto mt-10" max-width="400">
+    <!-- ตรวจสอบว่ามีการล็อกอินแล้วหรือยัง -->
+    <div v-if="!userData && !loading">
+      <v-card-title class="text-center">Login</v-card-title>
+
+      <!-- Form for login -->
+      <v-form @submit.prevent="login">
+        <v-text-field v-model="email" label="Email" outlined></v-text-field>
+        <v-text-field
+          v-model="password"
+          label="Password"
+          type="password"
+          outlined
+        ></v-text-field>
+        <v-btn
+          type="submit"
+          color="primary"
+          class="mx-auto mt-4"
+          block
+          style="display: flex; align-items: center; justify-content: center"
+        >
+          Login
+        </v-btn>
+      </v-form>
+
+      <!-- Google login button -->
+      <v-btn
+        @click="signInWithGoogle"
+        color="white"
+        dark
+        class="mx-auto mt-4"
+        style="display: flex; align-items: center; width: 100%"
+      >
+        <v-img>
+          <img src="@/assets/search.png" alt="Search Icon" width="24" />
+        </v-img>
+      </v-btn>
+    </div>
+
+    <!-- แสดงข้อมูลผู้ใช้หลังจาก login -->
+    <div v-if="userData && !loading" class="text-center">
+      <v-card-title>User Information</v-card-title>
+      <v-avatar size="100">
+        <img :src="userData.photoURL" alt="Profile Photo" />
+      </v-avatar>
+      <p class="mt-2">Name: {{ userData.displayName }}</p>
+      <p>Email: {{ userData.email }}</p>
+      <v-btn @click="logout" color="error" dark class="mx-auto mt-4">
+        Logout
+      </v-btn>
+    </div>
+
+    <!-- Snackbar for login/logout messages -->
+    <v-snackbar v-model="snackbar" :timeout="3000" color="success">
+      {{ snackbarMessage }}
+      <template v-slot:action="{ attrs, on }">
+        <v-btn
+          color="white"
+          text
+          v-bind="attrs"
+          v-on="on"
+          @click="snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
+
+    <!-- Loading indicator -->
+    <v-overlay :value="loading">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </v-overlay>
+  </v-card>
+</template>
+
+<script>
+import { auth, db } from '@/firebase/firebase'
+import { GoogleAuthProvider } from 'firebase/auth'
+
+export default {
+  data() {
+    return {
+      email: '',
+      password: '',
+      userData: null,
+      snackbar: false,
+      snackbarMessage: '',
+      loading: false,
+    }
+  },
+  methods: {
+    async signInWithGoogle() {
+      this.loading = true
+      const provider = new GoogleAuthProvider()
+      try {
+        const result = await auth.signInWithPopup(provider)
+        console.log(result.user)
+
+        await db.ref('users/' + result.user.uid).set({
+          displayName: result.user.displayName,
+          email: result.user.email,
+          photoURL: result.user.photoURL,
+        })
+
+        this.getUserData(result.user.uid)
+
+        this.showSnackbar('Login successful.')
+      } catch (error) {
+        console.error(error)
+      } finally {
+        this.loading = false
+      }
+    },
+    async getUserData(uid) {
+      try {
+        const snapshot = await db.ref('users/' + uid).once('value')
+        this.userData = snapshot.val()
+      } catch (error) {
+        console.error('Error fetching user data:', error)
+      }
+    },
+    async login() {
+      this.loading = true
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(
+          this.email,
+          this.password
+        )
+        this.getUserData(userCredential.user.uid)
+
+        this.showSnackbar('Login successful.')
+      } catch (error) {
+        console.error('Error signing in:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    async logout() {
+      this.loading = true
+      try {
+        await auth.signOut()
+        this.userData = null
+
+        this.showSnackbar('Logout successful.')
+      } catch (error) {
+        console.error('Error signing out:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    showSnackbar(message) {
+      this.snackbarMessage = message
+      this.snackbar = true
+    },
+  },
+}
+</script>
+
+<style scoped>
+.v-avatar img {
+  border-radius: 50%;
+}
+</style>
+-------------------------------------------------------------------------------------
+mian.js
+import Vue from 'vue'
+import App from './App.vue'
+import vuetify from './plugins/vuetify'
+
+Vue.config.productionTip = false
+
+new Vue({
+  vuetify,
+  render: h => h(App)
+}).$mount('#app')
+----------------------------------------------------------------
+firebase.js
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/database';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAgUXcVe08GR10RWz6XLCMkZmtYMfRCdNY",
+    authDomain: "loungza.firebaseapp.com",
+    databaseURL: "https://loungza-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "loungza",
+    storageBucket: "loungza.appspot.com",
+    messagingSenderId: "238632288399",
+    appId: "1:238632288399:web:3eeac194bd390c1d25f0fa"
+};
+firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  
+  export { auth, db };
+
+----------------------------------------------------------------
+เขียนด้วย vue 2
+หลังจากlogin เสร็จแล้ว ให้แสดงข้อมูล ชื่อ อายุ เบอร์โทร ตลอดเมื่อเข้าใช้งาน มีปุ่มที่สามารถกรอก,ปรับแก้ให้ไขข้อมูล ชื่อ อายุ เบอร์โทร ตามหัวข้อที่ต้องการแก้ไข และอัพเดทข้อมูลลงในfirebase เมื่อlogout และ login ใช้งานครั้งถัดไปให้แสดงข้อมูลที่บันทึกในรอบก่อน

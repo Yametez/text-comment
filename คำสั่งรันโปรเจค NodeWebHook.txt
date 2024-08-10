@@ -1,0 +1,27 @@
+Social Media Booking System via Facebook ชื่ออังกฤษ
+คำสั่งรันโปรเจค NodeWebHook
+ตอนเทส ใช้
+firebase emulators:start    ngrok ใช้ตัว
+
+
+https://0f1b-2001-fb1-3b-c791-f14e-75c9-8be7-e543.ngrok-free.app/fbmessageapi/us-central1/helloWorld
+
+
+
+
+
+https://helloworld-xnxx3iouga-uc.a.run.app
+-------------------------------------------------------------------------------
+Emojimessage
+
+ngrok http 3000 --host-header=rewrit
+
+nodemon index.js
+
+แก้โจทย์ บันทึกโน้ต
+อิโมจิ วัว 
+emojiMap[อิโมจิ วัว ] || อิโมจิ วัว  = text
+---------------------------------------------------------
+
+
+

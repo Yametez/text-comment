@@ -1,0 +1,13 @@
+PYTHON
+ตอนที่รัน ตรวจสอบให้ดีว่าได้ทำการรันตามขั้นตอนหรือไม่ อ่านได้ที่README
+Step3 และก็ไปStep 4 ได้ กรณีที่ใช้งานครั้งที่2ขึ้นไป
+
+Ngrok
+ngrok http 5001 
+ถ้าไม่ได้ให้ลองใช้
+ngrok http 5001 --host-header=rewrit
+
+-----------------
+senderPSID
+token
+EAADYAoOXQMQBOxmZBZA8mX6Y1o2YSNItRF2s2ZBhcs7ICUUNcU7Gf1sq8YYmnJszsII5qFOnKm1hXexbvby5ExDfqA4tLDAtPhjyS00YIph6PgvZBhbenYVEYKkAfgNAqcGhaV1kJF1fVZB1vibwzrmFgbLVOMy9km77Sg0KKC6IuNO5qjhWLMlfoZC85fy4bUDzkindQ2NBX7zPUj

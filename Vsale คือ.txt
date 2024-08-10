@@ -1,0 +1,34 @@
+Vsale
+คือ ระบบสรางใบเสนอราคาให้กับsale
+cd app
+
+อธิบาย
+*https://asia-southeast2-betask-crm.cloudfunctions.net/Prospective-bq_select_by_filter*
+*urlนี้ ตอนเทสนำ urlจากfirebase emulators มาใช้ /Prospective-bq_select_by_filter*
+
+Vsale 
+Login admin
+http://localhost:8080/admin/login
+-------------------------------------
+user Prospective
+http://localhost:8080/sales/Prospective
+สร้าง: customerContactImage
+-------------------------------------------------
+api Prospective เส้น exports.quotation_url นอกเหนือเส้นนี้ห้ามแก้ไขเด็ดขาด!!
+รัน firebase emulators:start
+
+http://127.0.0.1:5002/Prospective-quotation_url
+-------------------------------------
+*กำหนดงาน*
+สร้างUplaod นอกapp api แต่อยู่ในfun
+สร้างโฟรเดอร์Quotation ใน Uplaod
+เขียนเส้น api python ตัวอย่าง บรรทัด231
+แล้วค่อยแปลงเป็นtyscript
+
+Prospective.ts โค้ดที่แก้ไขอยู่บรรทัดที่2997 เป็นต้นไป
+สังเกต-async function handleImageUpload(fileBuffer: Buffer, filename: string, mimetype: string): Promise<string> {
+
+เทสป่านpostman
+Post
+Body 
+fromdata

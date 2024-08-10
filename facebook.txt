@@ -1,0 +1,256 @@
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * const {onCall} = require("firebase-functions/v2/https");
+ * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
+var axios = require("axios");
+const {onRequest} = require("firebase-functions/v2/https");
+const logger = require("firebase-functions/logger");
+// ddd
+// Create and deploy your first functions
+// https://firebase.google.com/docs/functions/get-started
+// #5555
+
+const cors = require('cors')({origin: true})
+const express = require('express')
+const app = express()
+
+app.use(cors)
+exports.helloWorld = onRequest((request, response) => {
+ return cors(request, response, async () => {
+  try {
+    const body = request.body;
+
+    if (request.method === 'GET') {
+      const VERIFY_TOKEN = "EAADYAoOXQMQBOxmZBZA8mX6Y1o2YSNItRF2s2ZBhcs7ICUUNcU7Gf1sq8YYmnJszsII5qFOnKm1hXexbvby5ExDfqA4tLDAtPhjyS00YIph6PgvZBhbenYVEYKkAfgNAqcGhaV1kJF1fVZB1vibwzrmFgbLVOMy9km77Sg0KKC6IuNO5qjhWLMlfoZC85fy4bUDzkindQ2NBX7zPUj";
+      const mode = request.query["hub.mode"];
+      const token = request.query["hub.verify_token"];
+      const challenge = request.query["hub.challenge"];
+
+      if (mode && token === VERIFY_TOKEN) {
+        return response.status(200).send(challenge);
+      } else {
+        return response.status(403).send('Forbidden');
+      }
+    } else if (body.object === "page") {
+      for (const entry of body.entry) {
+        const webhookEvent = entry.messaging[0];
+        const senderPSID = webhookEvent.sender.id;
+        const messageText = webhookEvent.message.text;
+        const keyword = ["เทสระบบจองคิว", "test appointment", "test Info"];
+        const containsKeyword = await hasKeyword(messageText, keyword);
+        console.log('containsKeyword', containsKeyword);
+        console.log('senderPSID', senderPSID);
+        console.log('messageText', messageText);
+        if (containsKeyword) {
+          // const messageData = {
+          //   'messaging_type': "RESPONSE",
+          //   'recipient': { id: senderPSID },
+          //   'message': {
+          //     'text': "กรุณาเลือกทางเลือก:",
+          //     'quick_replies': [
+          //       { content_type: "text", title: "INFO", payload: "OPTION_1" },
+          //       { content_type: "text", title: "รับแจ้งเตือน 7 วัน", payload: {} }
+          //     ]
+          //   }
+          // };
+          const messageData = {
+            "recipient": {
+              "id": senderPSID
+            },
+            "message": {
+              "attachment": {
+                "type": "template",
+                "payload": {
+                  "template_type": "generic",
+                  "elements": [
+                    {
+                      "title": "press to web site",
+                      "image_url": "https://scontent.xx.fbcdn.net/v/t1.15752-9/414168508_894277125569981_5463792854570269618_n.jpg?stp=dst-jpg_p206x206&_nc_cat=108&ccb=1-7&_nc_sid=5f2048&_nc_ohc=WMDa_FEu-tcQ7kNvgHR2pl3&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=03_Q7cD1QHIgoyYSrueIzHOn3069CNtMENMr3CFQK0fFKz1tQX0jA&oe=669B7AFC",
+                      "subtitle": "",
+                      "default_action": {
+                        "type": "web_url",
+                        "url": "https://betask-linked-facebook-test.web.app/MessageLogin?redirect=appoitment&shopId=U63f4a14fe78b8bf8414c1d197e432954&source=facebook&fbclid=IwAR1Hcz5SPP7LoU9cmuufH3LMecvE_F_HhDdG77jEBFSCi0sheqa1skO_z8I",
+                        "webview_height_ratio": "tall"
+                      },
+                      "buttons": [
+                        {
+                          "type": "web_url",
+                          "url": "https://betask-linked-facebook-test.web.app/MessageLogin?redirect=appoitment&shopId=U63f4a14fe78b8bf8414c1d197e432954&source=facebook&fbclid=IwAR1Hcz5SPP7LoU9cmuufH3LMecvE_F_HhDdG77jEBFSCi0sheqa1skO_z8I",
+                          "title": "Appointment Click"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+          await callSendAPIFLEX(messageData);
+        } else {
+          const res = await axios.get(`https://api-belinked.betaskthai.com/Connect/getPSID/${senderPSID}`);
+          if (res.data.status === "NOT MATCH") {
+            const userProfile = await getUserProfile(senderPSID);
+            const shopId = "";
+            const userName = "";
+            const pageID = "";
+            const userId = "";
+            await checkUser(senderPSID, shopId, userId, pageID, userName);
+          }
+        }
+      }
+
+      const getUserProfileFB = await getUserProfile(body.entry[0].messaging[0].sender.id);
+      if (getUserProfileFB) {
+        const getCheckoldUserFB = await getCheckoldUser(body.entry[0].messaging[0].sender.id);
+        const senderPSID = body.entry[0].messaging[0].sender.id;
+        const shopId = "";
+        const userName = `${getUserProfileFB.last_name} ${getUserProfileFB.first_name}`;
+        const pageID = body.entry[0].messaging[0].recipient.id;
+        const userId = getUserProfileFB.id;
+
+        if (getCheckoldUserFB === "NOT MATCH") {
+          await checkUser(senderPSID, shopId, userId, pageID, userName);
+        } else {
+          await updateCheckoldUserFB(senderPSID, shopId, userId, pageID, userName);
+        }
+      }
+
+      return response.status(200).send("success");
+   
+    } else {
+      return response.status(400).send('Bad Request');
+    }
+  } catch (error) {
+    console.error("Error processing request", error);
+    return response.status(500).send('Internal Server Error');
+  }
+});
+});
+
+
+async function checkUser(senderPSID, shopId, facebookId, pageID, userProfile) {
+  axios
+    .post("https://api-belinked.betaskthai.com/Connect/add", {
+      userPSID: senderPSID,
+      shopId: "U63f4a14fe78b8bf8414c1d197e432954",
+      facebookId: facebookId,
+      facebookName: userProfile,
+      pageID: "110743157238372",
+    })
+    .then((response) => {
+      console.log('response checkUser', response)
+    })
+    .catch((error) => {
+      console.error("Error sending data:", error);
+    });
+}
+async function updateCheckoldUserFB(senderPSID, shopId, facebookId, pageID, userProfile) {
+  let updateCheckoldUser = null
+  axios
+    .post("https://api-belinked.betaskthai.com/Connect/updateuser", {
+      id: senderPSID,
+      shopId: "U63f4a14fe78b8bf8414c1d197e432954",
+      facebookId: facebookId,
+      facebookName: userProfile,
+      pageID: "110743157238372",
+    })
+    .then((response) => {
+      updateCheckoldUser = response
+      console.log('response updateCheckoldUserFB', response)
+    })
+    .catch((error) => {
+      console.error("Error sending data:", error);
+      updateCheckoldUser = null
+    });
+    return updateCheckoldUser
+}
+
+// Function to get user profile from Facebook Graph API
+async function getUserProfile(senderPSID) {
+  let userProfiles = null
+  let config = {
+    method: 'get',
+    maxBodyLength: Infinity,
+    url: 'https://graph.facebook.com/' + senderPSID + '?&access_token=EAADYAoOXQMQBO7IlP8elfGhUwwyt9Ba6rGA2SZCO1UmtKZAjUUZBp8H0npga59a7mXe0rT0c3koBR6OOwMvytVtZBJ9Clqp7rVZAkHGZBl6R8hZCg7lB5yJxxZBl9ZATIIIHZCrAPCHFENWvN1SzEZCZA5MQ0K3ylF0gOro2jKgK9tRJoxZBeWyZBZCQUsZAfVAlaZAZC9PomV39QZAhoLMhmsDoFXk',
+    headers: { }
+  };
+  
+  await axios.request(config)
+  .then((response) => {
+    if (response.status == 200) {
+      userProfiles = response.data
+    } else {
+      userProfiles = null
+    }
+    console.log(response.status);
+  })
+  .catch((error) => {
+    userProfiles = null
+    // console.log('error : ', error);
+  });
+  return userProfiles
+}
+async function getCheckoldUser(senderPSID) {
+  let getCheckoldUserFB = null
+  let config = {
+    method: 'get',
+    maxBodyLength: Infinity,
+    url: 'https://api-belinked.betaskthai.com/Connect/getPSID/'+ senderPSID,
+    headers: { }
+  };
+  await axios.request(config)
+  .then((response) => {
+    // console.log('response', response.data.status);
+    if (response.status == 200) {
+      getCheckoldUserFB = response.data.status
+    } else {
+      getCheckoldUserFB = null
+    }
+  })
+  .catch((error) => {
+    getCheckoldUserFB = null
+  });
+  console.log('getCheckold', getCheckoldUserFB);
+  return getCheckoldUserFB
+}
+
+async function callSendAPI(messageData) {
+  await axios
+    .post("https://graph.facebook.com/v17.0/me/messages", messageData, {
+      params: {
+        access_token:
+          "EAADYAoOXQMQBO3rJCYYU0PWazZCD6E616j9IcZCzVt4OLN4tQNHTMa0y2QjLrMZB4ZA5yyP1TnSRkIc3jAbILSSIcA0oWcZCUExZC4hM1aT21IZCljiGoVEkEUAqw8dHTO9UDwLQ4QLPHmPpIo87KwziR1ChGsMViOTawGOYUbtvA5XsCd4IIa90uL5ZAbae3etC2ZCrCbXaxSeOTRHlL",
+      }, // ใส่ Page Access Token ของคุณที่ได้จาก Facebook Developer Console
+    })
+    .then(async (response) => {
+      console.log("Message sentCallAPI Success:");
+    })
+    .catch((error) => {
+      console.error("Error sending message:");
+    });
+}
+
+async function callSendAPIFLEX(messageData) {
+  await axios
+    .post("https://graph.facebook.com/v17.0/me/messages", messageData, {
+      params: {
+        access_token:
+          "EAADYAoOXQMQBO3rJCYYU0PWazZCD6E616j9IcZCzVt4OLN4tQNHTMa0y2QjLrMZB4ZA5yyP1TnSRkIc3jAbILSSIcA0oWcZCUExZC4hM1aT21IZCljiGoVEkEUAqw8dHTO9UDwLQ4QLPHmPpIo87KwziR1ChGsMViOTawGOYUbtvA5XsCd4IIa90uL5ZAbae3etC2ZCrCbXaxSeOTRHlL",
+      },
+    })
+    .then(async (response) => {
+      console.log("Message sentCallAPI Success:", response);
+    })
+    .catch((error) => {
+      console.error("Error sending message 441:", error);
+    });
+}
+
+async function hasKeyword(text, keywords) {
+  const lowercaseText = text.toLowerCase();
+  return keywords.some(keyword => lowercaseText.includes(keyword.toLowerCase()));
+}
