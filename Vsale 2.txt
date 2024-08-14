@@ -1,8 +1,10 @@
 Vsale #2
 user Prospective
 http://localhost:8080/sales/Prospective
+* firebase deploy --only "functions:importFile-api" *
 
-
+firebase serve --only functions
 *กำหนดงาน*
 ตอนอัปโหลดรูปให้ปรับขนาดจาก แนว แนวทแยง แนวต่างๆ ให้ปรับเป็นแนวตั้ง
 ขนาดความจุ สูงสุดที่ 300 kb
+
