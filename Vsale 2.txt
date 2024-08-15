@@ -3,8 +3,30 @@ user Prospective
 http://localhost:8080/sales/Prospective
 * firebase deploy --only "functions:importFile-api" *
 
+
+#คำสั่งรัน เข้าหน้า D:\vsales\api_firebase\functions> ก่อน
 firebase serve --only functions
+
+#คำสั่ง deploy
+firebase deploy --only functions
+
 *กำหนดงาน*
 ตอนอัปโหลดรูปให้ปรับขนาดจาก แนว แนวทแยง แนวต่างๆ ให้ปรับเป็นแนวตั้ง
-ขนาดความจุ สูงสุดที่ 300 kb
+ขนาดความจุ ไม่จำกัด แต่เมื่อมีการนำรูปขึ้นคลาว์ ขนาดที่จัดเก็บจะต้องน้อยลง
 
+
+#แก้ปัญหา เมื่อ deploy ไม่ได้ ( firebase deploy --only functions )
+1: ใช้คำสั่ง
+npm init @eslint/config
+
+2:เลือกTo check syntax only จากนั้นทำตามสเต็ปต่อไปนี้
+
+√ What type of modules does your project use? · commonjs
+√ Which framework does your project use? · vue
+√ Does your project use TypeScript? · javascript
+√ Where does your code run? · browser
+The config that you've selected requires the following dependencies:
+
+eslint, globals, eslint-plugin-vue
+√ Would you like to install them now? · No / Yes
+√ Which package manager do you want to use? · npm
