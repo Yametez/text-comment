@@ -19,7 +19,7 @@ app run: npm run dev
 api Prospective เส้น exports.quotation_url นอกเหนือเส้นนี้ห้ามแก้ไขเด็ดขาด!!
 รัน firebase emulators:start
 
-http://127.0.0.1:5002/Prospective-quotation_url
+จะได้เส้น    http://127.0.0.1:5002/Prospective-quotation_url
 -------------------------------------
 *กำหนดงาน*
 สร้างUplaod นอกapp api แต่อยู่ในfun
