@@ -1,0 +1,78 @@
+memberLoginwithsocial 
+fk name
+
+FacebookUser
+fk facebookName
+
+
+===============================
+
+Facebookpageconfig
+
+------------------------------------
+ยังไม่กล้าใช้จริง
+Model
+# facebook
+class FacebookBooking(db.Model):
+    __tablename__ = 'facebook_booking'
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_name = db.Column(db.String(255), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    service_selected = db.Column(db.String(255), nullable=False)
+    booking_date = db.Column(db.Date, nullable=False)
+    booking_time = db.Column(db.Time, nullable=False)
+    branch = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, customer_name, phone_number, service_selected, booking_date, booking_time, branch):
+        self.customer_name = customer_name
+        self.phone_number = phone_number
+        self.service_selected = service_selected
+        self.booking_date = booking_date
+        self.booking_time = booking_time
+        self.branch = branch
+=============================================================
+controller
+# เก็บข้อมูลbooking facebook
+@app.route('/facebook/booking', methods=['POST'])
+def add_facebook_booking():
+    data = request.get_json()
+
+    # ตรวจสอบข้อมูลที่ได้รับ
+    customer_name = data.get('customer_name')
+    phone_number = data.get('phone_number')
+    service_selected = data.get('service_selected')
+    booking_date = data.get('booking_date')  # ควรอยู่ในรูปแบบ 'YYYY-MM-DD'
+    booking_time = data.get('booking_time')  # ควรอยู่ในรูปแบบ 'HH:MM'
+    branch = data.get('branch')
+
+    if not all([customer_name, phone_number, service_selected, booking_date, booking_time, branch]):
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    # แปลงรูปแบบวันที่และเวลา
+    try:
+        booking_date_obj = datetime.strptime(booking_date, '%Y-%m-%d').date()
+        booking_time_obj = datetime.strptime(booking_time, '%H:%M').time()
+    except ValueError:
+        return jsonify({'message': 'Invalid date or time format'}), 400
+
+    # สร้างข้อมูลการจองใหม่
+    new_booking = FacebookBooking(
+        customer_name=customer_name,
+        phone_number=phone_number,
+        service_selected=service_selected,
+        booking_date=booking_date_obj,
+        booking_time=booking_time_obj,
+        branch=branch
+    )
+
+    try:
+        # บันทึกข้อมูลในฐานข้อมูล
+        db.session.add(new_booking)
+        db.session.commit()
+        return jsonify({'message': 'Booking added successfully', 'booking_id': new_booking.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': 'Failed to add booking', 'error': str(e)}), 500
+***********************************************************************

@@ -1,0 +1,182 @@
+}if (containsKeyname) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": "กรุณากรอกเบอร์โทรติดต่อกลับ"
+                }
+              };
+              await callSendAPIFLEX(messageData); // ส่งข้อความตอบกลับโดยใช้ callSendAPIFLEX
+            }if (containsKeytell) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {    
+                  "text": "กรุณาเลือกวันที่ที่ต้องการรับบริการ",
+                  "quick_replies":[
+                  {
+                    "content_type":"text",
+                    "title":"18/08/2567",
+                    "payload":"{POSTBACK_PAYLOAD}"
+                  },{
+                    "content_type":"text",
+                    "title":"31/08/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"2/09/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"5/09/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"14/09/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"21/09/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"30/09/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"1/10/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"4/10/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"9/10/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"10/10/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"14/10/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"15/10/2567",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  ]
+                }
+              };
+              await callSendAPIFLEX(messageData);
+            }if (containsKeywordselectdate) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": "กรุณาเลือกสาขารับบริการ",
+                  "quick_replies":[
+                  {
+                    "content_type":"text",
+                    "title":"ลาดพร้าว",
+                    "payload":"{POSTBACK_PAYLOAD}"
+                  },{
+                    "content_type":"text",
+                    "title":"ปากเกร็ด",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"แจ้งวัฒนะ",
+                    "payload":"{POSTBACK_PAYLOAD}",
+                    "image_url":"http://example.com/img/green.png"
+                  }
+                ]
+                }
+              };
+              await callSendAPIFLEX(messageData); // ส่งข้อความตอบกลับโดยใช้ callSendAPIFLEX
+            }if (containsKeywordbranch) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "attachment": {
+                    "type": "template",
+                    "payload": {
+                      "template_type": "generic",
+                      "elements": [
+                        {
+                          "title": "คุณเลือกสาขา",
+                          "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSop-SucP_DUwAyIFM8cT5g3lX3Du34jh7HVA&s",
+                          "subtitle": "",
+                        },
+                      ]
+                    }
+                  }
+                }
+              };
+              await callSendAPIFLEX(messageData); // ส่งข้อความตอบกลับโดยใช้ callSendAPIFLEX
+            }if (containsKeywordserve) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "attachment": {
+                    "type": "template",
+                    "payload": {
+                      "template_type": "generic",
+                      "elements": [
+                        {
+                          "title": "เลือกบริการที่ต้องการ",
+                          "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSop-SucP_DUwAyIFM8cT5g3lX3Du34jh7HVA&s",
+                          "subtitle": "",
+                          "default_action": {
+                            "type": "web_url",
+                            "url": "https://betask-linked-facebook-test.web.app/MessageLogin?redirect=appoitment&shopId=U63f4a14fe78b8bf8414c1d197e432954&source=facebook&fbclid=IwAR1Hcz5SPP7LoU9cmuufH3LMecvE_F_HhDdG77jEBFSCi0sheqa1skO_z8I",
+                            "webview_height_ratio": "tall"
+                          },
+                          "buttons": [
+                            {
+                              "type": "postback",
+                              "title": "กรุณาเลือกบริการ",
+                              "payload": "เลือกบริการ"
+                            }
+                          ]
+                        },
+                      ]
+                    }
+                  }
+                }
+              };
+              await callSendAPIFLEX(messageData); // ส่งข้อความตอบกลับโดยใช้ callSendAPIFLEX
