@@ -1,0 +1,14 @@
+DB
+booking 
+อย่าลืม where shopId ทุกครั้ง
+
+
+&& bookingData.fieldValue != '' && bookingData.phone != '' && bookingData.dateSelect != null && bookingData.timeSelect != null && bookingData.branch != null && bookingData.service != null
+
+
+GET CustomField = [{},{}]
+
+              for X in CustomField:
+                if x.get('fName') == 'ชื่อ'
+                  x.get('fvalue').push(bookingData.fieldValue)
+                else :
