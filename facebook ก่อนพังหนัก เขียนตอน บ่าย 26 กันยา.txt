@@ -1,0 +1,704 @@
+  /**
+   * Import function triggers from their respective submodules:
+   *
+   * const {onCall} = require("firebase-functions/v2/https");
+   * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+   *
+   * See a full list of supported triggers at https://firebase.google.com/docs/functions
+   */
+  var axios = require("axios"); // ใช้สำหรับการทำ HTTP requests
+  const {onRequest} = require("firebase-functions/v2/https"); // นำเข้า onRequest trigger จาก Firebase Functions
+  const logger = require("firebase-functions/logger"); // นำเข้า logger จาก Firebase Functions
+
+  // ตั้งค่า CORS เพื่อให้สามารถเข้าถึงจาก origin อื่นได้...
+  const cors = require('cors')({origin: true});
+  const express = require('express'); // นำเข้า Express framework
+  const app = express(); // สร้าง Express application
+
+  app.use(cors); // ใช้ middleware CORS ใน Express application
+  app.use(express.json());
+
+  // สร้างและ deploy ฟังก์ชัน helloWorld
+  exports.helloWorld = onRequest((request, response) => {
+    return cors(request, response, async () => {
+      try {
+        const body = request.body; // รับข้อมูล body ของ request
+        
+
+        // ตรวจสอบว่า request เป็น GET หรือไม่
+        if (request.method === 'GET') {
+          const VERIFY_TOKEN = "EAADYAoOXQMQBOxmZBZA8mX6Y1o2YSNItRF2s2ZBhcs7ICUUNcU7Gf1sq8YYmnJszsII5qFOnKm1hXexbvby5ExDfqA4tLDAtPhjyS00YIph6PgvZBhbenYVEYKkAfgNAqcGhaV1kJF1fVZB1vibwzrmFgbLVOMy9km77Sg0KKC6IuNO5qjhWLMlfoZC85fy4bUDzkindQ2NBX7zPUj";
+          const mode = request.query["hub.mode"];
+          const token = request.query["hub.verify_token"];
+          const challenge = request.query["hub.challenge"];
+          
+
+          // ตรวจสอบ mode และ token ว่าตรงกับ VERIFY_TOKEN หรือไม่
+          if (mode && token === VERIFY_TOKEN) {
+            return response.status(200).send(challenge); // ส่ง challenge กลับไป
+          } else {
+            return response.status(403).send('Forbidden'); // ส่ง status 403 Forbidden
+          }
+        } 
+        // ตรวจสอบว่า body.object เป็น "page" หรือไม่
+        else if (body.object === "page") {
+          for (const entry of body.entry) {
+            const webhookEvent = entry.messaging[0];
+            const senderPSID = webhookEvent.sender.id; // รับ PSID ของผู้ส่ง
+            const messageText = webhookEvent.message.text; // รับข้อความของผู้ส่ง
+            const keywordhi = ["สวัสดี", "ไง", "ใช้งาน", "เลือกการทำรายการ", "รายการ", "ทำรายการ","w'",]; // คำสำคัญที่ต้องการตรวจสอบ
+            const keywordselect = ["จองคิว", "คิว", "จอง","รับบริการ"]; // คำสำคัญที่ต้องการตรวจสอบ
+            const keyname = ["ชื่อ/^[ก-๙a-zA-Z]+\s[ก-๙a-zA-Z]+$/","ชื่อ/^ [ก-๙a-zA-Z]+\s[ก-๙a-zA-Z]+$/"]; // คำสำคัญที่ต้องการตรวจสอบ
+            const containsKeywordhi = await hasKeyword(messageText, keywordhi); // ตรวจสอบข้อความว่ามีคำสำคัญหรือไม่
+            const containsKeywordselect = await hasKeyword(messageText, keywordselect); // ตรวจสอบข้อความว่ามีคำสำคัญหรือไม่
+            const containsKeyname = await hasKeyword(messageText, keyname,'name'); // ตรวจสอบข้อความว่ามีคำสำคัญหรือไม่
+
+            const dateSelect = /^\d{4}-\d{2}-\d{1,2}$/;
+            const timeSelect = /^([0-1]\d|2[0-3]):([0-5]\d)$/; // รูปแบบเวลา เช่น 08:00, 14:30
+            const fieldValue = /^[ก-๙a-zA-Z]+\s[ก-๙a-zA-Z]+$/;
+            const phone = /^0\d{9,10}$/;
+            const branch = /^(คลอง6|ปากเกร็ด|สำนักงานใหญ่)$/;
+            const service = /^(ล้างรถ|ตัดผม|ต่อขนตา)$/;
+            // console.log('containsKeywordhi',containsKeywordhi)
+
+            const moment = require('moment'); // ใช้สำหรับการจัดการวันที่
+
+            
+            // ตรวจสอบชื่อนามสกุล
+            let bookingData = {
+              'CREATE_USER' : 'U7dd6c4ce2c9860a959457d02e54efd99',
+              'IsNotify' : 'False',
+              'LAST_USER' : 'U7dd6c4ce2c9860a959457d02e54efd99',
+              'bookingDataCustomerEmail' : '',
+              'bookingFieldId': '2854',
+              'bookingLanguage': '0',
+              'fieldName' : 'ชื่อ',
+              'fieldValue': '', //เขียนเองตรงนี้
+              'phone': '', //เก็บเบอร์
+              'dateSelect': '', //เก็บวันที่
+              'timeSelect': '', // สำหรับเก็บเวลาที่เลือก
+              'branch': '', //เก็บสาขา
+              'service': '', //เก็บบริการ
+              'shopId': 'SD_1725249853821',
+              'flowId': '', // เพิ่ม flowId สำหรับเก็บรหัสบริการ
+              'masBranchID': '', // เพิ่ม masBranchID สำหรับเก็บรหัสสาขา
+              'fieldId' : '', // เขียนเองจบตรงนี้
+              'dueDate': dateSelect.bookingData && timeSelect.bookingData,
+              'fileUpload1' : '',
+              'fileUpload2' : '',
+              'fieldValue' : '',
+              'flowId' : '',
+              'getLimitBooking' : 0,
+              'limitBookingCheck' : 'False',
+              'limitBookingCount' : null,
+              'limitBookingId' : '',
+              'packageId' : '',
+              'sourceLink' : 'Facebook',
+              'statusBookingForm' : 'BookingForm',
+              'statusUpload1' : 'False',
+              'statusUpload2' : 'False',
+              'timeText' : '',
+              'tokenPackage' : '',
+              'userId' : 'U7dd6c4ce2c9860a959457d02e54efd99',
+            }
+          
+            
+            // เก็บชื่อมาแล้ว กรอกเบอร์โทร
+            if (fieldValue.test(messageText)) {
+              insertname = messageText;
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": `ชื่อของลูกค้าคือ:\n${insertname} \nกรุณากรอกเบอร์โทรติดต่อกลับ`
+                }
+              };
+              bookingData.fieldValue = insertname
+              await callSendAPIFLEX(messageData);
+            }
+            // && insertname.test != '' && inserttell.test != '' 
+            // เก็บข้อมูลเบอร์โทร และเลือกวันที่
+            if (phone.test(messageText)) {
+              inserttell = messageText;
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": `หมายเลขติดต่อกลับของลูกค้าคือ:${inserttell} กรุณาเลือกวันรับบริการ`,
+                  "quick_replies":[
+                    {
+                      "content_type": "text",
+                      "title": "2567-08-10",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-08-11",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-09-09",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-09-10",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-09-12",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-09-13",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-09-30",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-01",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-04",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-09",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-10",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-14",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "แสดงเพิ่มเติม",
+                      "payload": "{POSTBACK_PAYLOAD}",
+                      "image_url": "http://example.com/img/green.png"
+                  },
+                  ]
+                }
+              };
+              
+              bookingData.phone = inserttell
+              await callSendAPIFLEX(messageData);
+            } //  "แสดงวันที่เพิ่มเติม"
+            if (messageText === "แสดงเพิ่มเติม") {
+              const moreMessageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": "วันที่เพิ่มเติม\nหากไม่พบวันที่ต้องการ\nท่านสามารถระบุวันที่ที่ต้องการ\nเช่น 2567-10-25 เป็นต้น",
+                  "quick_replies": [
+                    {
+                      "content_type": "text",
+                      "title": "2567-10-15",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-16",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-17",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-18",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-19",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-20",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-21",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-22",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "2567-10-23",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                  {
+                      "content_type": "text",
+                      "title": "ระบุวันที่ต้องการ",
+                      "payload": "{POSTBACK_PAYLOAD}"
+                  },
+                    // เพิ่มรายการอื่น ๆ
+                  ]
+                }
+              };
+              bookingData.phone = inserttell
+              await callSendAPIFLEX(moreMessageData);
+            }
+
+            // เก็บวันที่ และเลือกเวลา
+            if (dateSelect.test(messageText)) {
+              selectedDate = messageText; // เก็บวันที่ที่ผู้ใช้เลือก
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": `คุณได้เลือกวันที่ ${selectedDate} เพื่อรับบริการเรียบร้อยแล้ว กรุณาเลือกเวลา`,
+                  "quick_replies": [
+                    { "content_type": "text", "title": "08:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "08:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "09:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "09:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "10:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "10:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "11:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "11:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "12:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "12:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "13:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    // เพิ่มรายการเวลาอื่น ๆ
+                    { "content_type": "text", "title": "แสดงเวลาเพิ่มเติม", "payload": "{POSTBACK_PAYLOAD}" }
+                  ]
+                }
+              };
+              bookingData.dateSelect = selectedDate
+              await callSendAPIFLEX(messageData);
+            }//"แสดงเวลาเพิ่มเติม" 
+            if (messageText === "แสดงเวลาเพิ่มเติม") {
+              const moreMessageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": "กรุณาเลือกเวลา",
+                  "quick_replies": [
+                    { "content_type": "text", "title": "13:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "14:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "14:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "15:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "15:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "16:00", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "16:30", "payload": "{POSTBACK_PAYLOAD}" },
+                    { "content_type": "text", "title": "17:00", "payload": "{POSTBACK_PAYLOAD}" },
+                  ]
+                }
+              };
+              bookingData.dateSelect = selectedDate
+              await callSendAPIFLEX(moreMessageData);
+            }
+
+            // เก็บเวลา และเลือกสาขา
+            if (timeSelect.test(messageText)) {
+              selectedtime = messageText; // เก็บวันที่ที่ผู้ใช้เลือก
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": `คุณได้เลือกเวลา ${selectedtime} เพื่อรับบริการเรียบร้อยแล้ว กรุณาเลือกสาขารับบริการ`,
+                  "quick_replies":[
+                    {
+                      "content_type":"text",
+                      "title":"คลอง6",
+                      "payload":"{POSTBACK_PAYLOAD}"
+                    },
+                    {
+                      "content_type":"text",
+                      "title":"ปากเกร็ด",
+                      "payload":"{POSTBACK_PAYLOAD}",
+                      "image_url":"http://example.com/img/green.png"
+                    },
+                    {
+                      "content_type":"text",
+                      "title":"สำนักงานใหญ่",
+                      "payload":"{POSTBACK_PAYLOAD}",
+                      "image_url":"http://example.com/img/green.png"
+                    }
+                  ]
+                }
+              };
+              bookingData.branch = selectedtime
+              await callSendAPIFLEX(messageData);
+            }
+
+            // เก็บเลือกสาขา และเลือกบริการที่ต้องการ
+            if (branch.test(messageText)) {
+              selectedBranch = messageText;
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": `คุณได้เลือกสาขา ${selectedBranch} เลือกรับบริการ`,
+                  "quick_replies":[
+                    {
+                      "content_type":"text",
+                      "title":"ล้างรถ",
+                      "payload":"{POSTBACK_PAYLOAD}"
+                    },
+                    {
+                      "content_type":"text",
+                      "title":"ตัดผม",
+                      "payload":"{POSTBACK_PAYLOAD}",
+                      "image_url":"http://example.com/img/green.png"
+                    },
+                    {
+                      "content_type":"text",
+                      "title":"ต่อขนตา",
+                      "payload":"{POSTBACK_PAYLOAD}",
+                      "image_url":"http://example.com/img/green.png"
+                    }
+                  ]
+                }
+              };
+              bookingData.service = selectedBranch
+              await callSendAPIFLEX(messageData);
+            }
+
+            // ตรวจสอบข้อมูลทั้งหมด พร้อมส่งกลับมาหาผู้ใช้
+            if (service.test(messageText)) {
+              selectedService = messageText; // เก็บบริการที่ผู้ใช้เลือก
+              // ตรวจสอบว่าข้อมูลครบถ้วนก่อนส่งคำตอบ
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": `ชื่อ${insertname} \nเบอร์โทร ${inserttell} \nได้เลือกบริการ ${selectedService} \nในวันที่ ${selectedDate} \nเวลา ${selectedtime} \nสาขา ${selectedBranch}`,
+                }
+              };
+              bookingData.fieldValue = insertname
+              // if(insertname === /^[ก-๙a-zA-Z]+\s[ก-๙a-zA-Z]+$/.test){
+              //   bookingData.fieldId = 8037;
+              // }
+              bookingData.phone = inserttell
+              // if (/^\d{10}$/.test(inserttell)) {
+              //   bookingData.fieldId = 8038; // รหัสสำหรับหมายเลขโทรศัพท์
+              // }
+              bookingData.service = selectedService 
+              if (selectedService === 'ล้างรถ') {
+                bookingData.flowId = 8097;
+              } else if (selectedService === 'ตัดผม') {
+                bookingData.flowId = 8096;
+              } else if (selectedService === 'ต่อขนตา') {
+                bookingData.flowId = 7855;
+              }
+              bookingData.dateSelect = selectedDate
+              bookingData.timeSelect = selectedtime
+              if (selectedBranch === 'สำนักงานใหญ่') {
+                bookingData.masBranchID = 3411;
+              } else if (selectedBranch === 'ปากเกร็ด') {
+                bookingData.masBranchID = 3412;
+              } else if (selectedBranch === 'คลอง6') {
+                bookingData.masBranchID = 3414;
+              }
+              bookingData.branch = selectedBranch
+
+              // GET CustomField = [{},{}]
+
+              // for X in CustomField:
+              //   if x.get('fieldName') == 'ชื่อ'
+              //     x.get('fieldValue').push(bookingData.fieldValue)
+              //   if x.get('fieldName') == 'เบอร์โทร'
+              //     x.get('fieldValue').push(bookingData.phone)
+              //     else :
+
+              // กำหนด CustomField
+            let CustomField = [
+              { fieldName: 'ชื่อ', fieldValue: [] , fieldId : '8037'},
+              { fieldName: 'เบอร์โทร', fieldValue: [] , fieldId : '8038'}
+            ];
+
+            // วนลูปเพื่ออัปเดตค่าใน CustomField ตามข้อมูลใน bookingData
+            let bookingdatadeletephone = bookingData
+            for (( x ) of CustomField) {
+              if (x.fieldName === 'ชื่อ') {
+                delete bookingdatadeletephone.phone;
+                x.fieldValue = (bookingdatadeletephone.fieldValue);  // เพิ่มข้อมูลชื่อจาก bookingData
+                x.fieldId = (bookingdatadeletephone.fieldId);
+                console.log('x=fieldname', x)
+                console.log('bookingdatadeletephone', bookingdatadeletephone.fieldId)
+              } else if (x.fieldName === 'เบอร์โทร') {
+                x.fieldValue = (bookingData.phone);  // เพิ่มข้อมูลเบอร์โทรจาก bookingData
+                x.fieldId = (bookingdatadeletephone.fieldId);
+              }
+            }
+            // console.log(CustomField);
+
+              await callSendAPIFLEX(messageData);
+            } else (error) =>{
+              console.error("Error sending booking data:", error.message);
+            }
+
+            // แสดงข้อมูลที่ถูกส่งกลับไปยังผู้ใช้ใน console
+            // console.log('bookingData',bookingData)
+            if (typeof bookingData === 'object' && bookingData !== null){
+            // หากข้อมูลครบถ้วน ส่งการจองไปยัง API
+            if (bookingData.fieldValue && bookingData.phone && bookingData.dateSelect && bookingData.timeSelect && bookingData.branch && bookingData.service && bookingData.shopId) {
+              try {
+                // แปลง bookingData เป็น JSON  ก่อนส่ง
+                const jsonData = []
+                jsonData.push(bookingData);
+                  const apiResponse = await axios.post('http://172.0.0.136:5001/Booking/add', jsonData,{
+                    headers: {
+                      'Content-Type': 'application/json',  // ตั้งค่า Content-Type ให้เป็น JSON
+                    },
+                  })
+                  ;
+                  // console.log('API response:', apiResponse.data);
+                  // const apiResponse2 = await axios.post('http://192.168.1.59:5001/BookingData/add', bookingData);
+                  // console.log('API response:', apiResponse2.data);
+                } catch (error) {
+                  // console.error("Error sending booking data:", error.message);
+                  // console.error("Error sending booking data:", error.response ? error.response.data : error.message);
+                  // console.error("Error sending booking data:", error.response);
+                  console.error("Error sending booking data:", error.response.data);
+            }
+          }
+        }
+
+            // ถ้ามีคำสำคัญ
+            if (containsKeywordhi) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": "สวัสดีครับ ต้องการให้ช่วยอะไรไหมครับ",
+                  "quick_replies":[
+                    {
+                      "content_type":"text",
+                      "title":"จองคิว",
+                      "payload":"{POSTBACK_PAYLOAD}"
+                    },{
+                      "content_type":"text",
+                      "title":"รับบริการ",
+                      "payload":"{POSTBACK_PAYLOAD}",
+                      "image_url":"http://example.com/img/green.png"
+                    }
+                  ]
+                }
+              };
+              await callSendAPIFLEX(messageData); // ส่งข้อความตอบกลับโดยใช้ callSendAPIFLEX
+            }if (containsKeywordselect) {
+              const messageData = {
+                "recipient": {
+                  "id": senderPSID
+                },
+                "message": {
+                  "text": "กรุณากรอกชื่อ-นามสกุล  \nตัวอย่าง\nชื่อนายโชคดี ปลอดภัย "
+                }
+              };
+              await callSendAPIFLEX(messageData); // ส่งข้อความตอบกลับโดยใช้ callSendAPIFLEX
+            
+            } else {
+              const res = await axios.get(`https://api-belinked.betaskthai.com/Connect/getPSID/${senderPSID}`);
+              if (res.data.status === "NOT MATCH") {
+                const userProfile = await getUserProfile(senderPSID); // ดึงข้อมูลโปรไฟล์ผู้ใช้
+                const shopId = "";
+                const userName = "";
+                const pageID = "";
+                const userId = "";
+                await checkUser(senderPSID, shopId, userId, pageID, userName); // ตรวจสอบและเพิ่มผู้ใช้ใหม่
+              }
+            }
+          }
+
+          const getUserProfileFB = await getUserProfile(body.entry[0].messaging[0].sender.id); // ดึงข้อมูลโปรไฟล์จาก Facebook Graph API
+          if (getUserProfileFB) {
+            const getCheckoldUserFB = await getCheckoldUser(body.entry[0].messaging[0].sender.id); // ตรวจสอบผู้ใช้เก่า
+            const senderPSID = body.entry[0].messaging[0].sender.id;
+            const shopId = "";
+            const userName = `${getUserProfileFB.last_name} ${getUserProfileFB.first_name}`;
+            const pageID = body.entry[0].messaging[0].recipient.id;
+            const userId = getUserProfileFB.id;
+
+            if (getCheckoldUserFB === "NOT MATCH") {
+              await checkUser(senderPSID, shopId, userId, pageID, userName); // เพิ่มผู้ใช้ใหม่
+            } else {
+              await updateCheckoldUserFB(senderPSID, shopId, userId, pageID, userName); // อัพเดทข้อมูลผู้ใช้เก่า
+            }
+          }
+          return response.status(200).send("success"); // ส่งสถานะสำเร็จกลับไป
+
+        } else {
+          return response.status(400).send('Bad Request'); // ส่งสถานะ Bad Request
+        }
+      } catch (error) {
+        console.error("Error processing request", error); // แสดง error ใน console
+        return response.status(500).send('Internal Server Error'); // ส่งสถานะ Internal Server Error
+      }
+    });
+  });
+// มีการปรับแก้ไข
+// ฟังก์ชัน checkUser เพื่อเพิ่มผู้ใช้ใหม่ในฐานข้อมูล
+async function checkUser(senderPSID, shopId, facebookId, pageID, userProfile) {
+  try {
+    const response = await axios.post("https://api-belinked.betaskthai.com/Connect/add", {
+      userPSID: senderPSID,
+      shopId: "SD_1725249853821",
+      facebookId: facebookId,
+      facebookName: userProfile,
+      pageID: "110743157238372",
+    });
+    console.log('response checkUser', response); // แสดง response ใน console
+  } catch (error) {
+    console.error("Error sending data:", error); // แสดง error ใน console
+  }
+}
+// มีการปรับแก้ไข
+// ฟังก์ชัน updateCheckoldUserFB เพื่ออัพเดทข้อมูลผู้ใช้เก่า
+async function updateCheckoldUserFB(senderPSID, shopId, facebookId, pageID, userProfile) {
+  try {
+    const response = await axios.post("https://api-belinked.betaskthai.com/Connect/updateuser", {
+      id: senderPSID,
+      shopId: "U63f4a14fe78b8bf8414c1d197e432954",
+      facebookId: facebookId,
+      facebookName: userProfile,
+      pageID: "110743157238372",
+    });
+    console.log('response updateCheckoldUserFB', response); // แสดง response ใน console
+    return response; // ส่งคืนข้อมูล response
+  } catch (error) {
+    console.error("Error sending data:", error); // แสดง error ใน console
+    return null; // ส่งคืน null ในกรณีที่เกิดข้อผิดพลาด
+  }
+}
+
+
+  // ฟังก์ชัน getUserProfile เพื่อดึงข้อมูลโปรไฟล์ผู้ใช้จาก Facebook Graph API
+  async function getUserProfile(senderPSID) {
+    let userProfiles = null;
+    let config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: 'https://graph.facebook.com/' + senderPSID + '?&access_token=EAADYAoOXQMQBO7IlP8elfGhUwwyt9Ba6rGA2SZCO1UmtKZAjUUZBp8H0npga59a7mXe0rT0c3koBR6OOwMvytVtZBJ9Clqp7rVZAkHGZBl6R8hZCg7lB5yJxxZBl9ZATIIIHZCrAPCHFENWvN1SzEZCZA5MQ0K3ylF0gOro2jKgK9tRJoxZBeWyZBZCQUsZAfVAlaZAZC9PomV39QZAhoLMhmsDoFXk',
+      headers: { }
+    };
+    
+    await axios.request(config)
+      .then((response) => {
+        if (response.status == 200) {
+          userProfiles = response.data;
+        } else {
+          userProfiles = null;
+        }
+        console.log(response.status); // แสดงสถานะ response ใน console
+      })
+      .catch((error) => {
+        userProfiles = null;
+      });
+    return userProfiles;
+  }
+
+  // ฟังก์ชัน getCheckoldUser เพื่อดึงข้อมูลสถานะผู้ใช้เก่า
+  async function getCheckoldUser(senderPSID) {
+    let getCheckoldUserFB = null;
+    let config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: 'https://api-belinked.betaskthai.com/Connect/getPSID/'+ senderPSID,
+      headers: { }
+    };
+    await axios.request(config)
+      .then((response) => {
+        if (response.status == 200) {
+          getCheckoldUserFB = response.data.status;
+        } else {
+          getCheckoldUserFB = null;
+        }
+      })
+      .catch((error) => {
+        getCheckoldUserFB = null;
+      });
+    return getCheckoldUserFB;
+  }
+
+  // ฟังก์ชัน callSendAPI เพื่อส่งข้อความตอบกลับไปยัง Facebook Messenger
+  async function callSendAPI(messageData) {
+    await axios
+      .post("https://graph.facebook.com/v17.0/me/messages", messageData, {
+        params: {
+          access_token: "EAADYAoOXQMQBO3rJCYYU0PWazZCD6E616j9IcZCzVt4OLN4tQNHTMa0y2QjLrMZB4ZA5yyP1TnSRkIc3jAbILSSIcA0oWcZCUExZC4hM1aT21IZCljiGoVEkEUAqw8dHTO9UDwLQ4QLPHmPpIo87KwziR1ChGsMViOTawGOYUbtvA5XsCd4IIa90uL5ZAbae3etC2ZCrCbXaxSeOTRHlL",
+        }, // ใส่ Page Access Token ของคุณที่ได้จาก Facebook Developer Console
+      })
+      .then(async (response) => {
+        console.log("Message sentCallAPI Success:"); // แสดงข้อความว่าเรียกใช้ API สำเร็จ
+      })
+      .catch((error) => {
+        console.error("Error sending message:"); // แสดง error ใน console
+      });
+  }
+
+  // ฟังก์ชัน callSendAPIFLEX เพื่อส่งข้อความตอบกลับไปยัง Facebook Messenger โดยใช้เทมเพลต
+  async function callSendAPIFLEX(messageData) {
+    console.log('callSendAPIFLEX')
+    await axios
+      .post("https://graph.facebook.com/v17.0/me/messages", messageData, {
+        params: {
+          access_token: "EAADYAoOXQMQBO99OGIir0ucN5CYgRlPcBuBNmZAMvDxBJvENoL6z6avpZAJqkqWTDqQlAHFkvjZAU0gQzlYkya4z1ZCzMBSVzcWQ2zMiptgTMsYiDwIyL1puRtr03Ku26le8aY3QYrQETJ6PZBgjWMVIH6KyNvxBCCIfQFZCKgqHw5HAM8cvFD0OyA8u1h4HM6cExowL8ZA09mD06ip",
+        },
+      })
+      .then(async (response) => {
+        console.log("Message sentCallAPI Success:"); // แสดงข้อความว่าเรียกใช้ API สำเร็จ
+      })
+      .catch((error) => {
+        console.error("Error sending message 260:", error); // แสดง error ใน console
+      });
+  }
+
+  // ฟังก์ชัน hasKeyword เพื่อตรวจสอบข้อความว่ามีคำสำคัญหรือไม่
+  async function hasKeyword(text, keywords,key) {
+    console.log('keywords',keywords)
+    const lowercaseText = text.toLowerCase();
+    if(key === 'name'){
+      const kum = /^ชื่อ\s[ก-๙a-zA-Z]+\s[ก-๙a-zA-Z]*$/;
+    return kum.test(text);
+    }else{
+      return keywords.some(keyword => lowercaseText.includes(keyword.toLowerCase()));
+    }
+    
+  }
